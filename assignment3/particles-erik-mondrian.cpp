@@ -20,10 +20,11 @@ string slurp(string fileName);  // forward declaration
 
 struct AlloApp : App {
   Parameter pointSize{"/pointSize", "", 1.0, 0.0, 2.0};
-  Parameter timeStep{"/timeStep", "", 0.1, 0.01, 0.6};
-  Parameter dragFactor{"/dragFactor", "", 0.1, 0.0, 0.9};
-  Parameter radius{"/radius", "", 1.0, 0.5, 10.0};
-  Parameter spring_stiffness{"/springStiffness", "", 0.1, 0.1, 1.0};
+  Parameter timeStep{"/timeStep", "", 0.3, 0.01, 0.6};
+  Parameter dragFactor{"/dragFactor", "", 0.45, 0.0, 0.9};
+  Parameter radius{"/radius", "", 3.0, 0.5, 10.0};
+  Parameter spring_stiffness{"/springStiffness", "", 0.75, 0.1, 1.0};
+  Parameter charge{"/chargeConstant", "", 0.01, 0.01, 1.0};
   //
 
   ShaderProgram pointShader;
@@ -43,6 +44,7 @@ struct AlloApp : App {
     gui.add(dragFactor);   // add parameter to GUI
     gui.add(radius);
     gui.add(spring_stiffness);
+    gui.add(charge);
     //
   }
 
@@ -78,10 +80,11 @@ struct AlloApp : App {
       force.push_back(randomVec3f(1));
     }
 
-    nav().pos(0, 0, 10);
+    nav().pos(0, 0, 15);
   }
 
   bool freeze = false;
+  bool love = false;
   void onAnimate(double dt) override {
     if (freeze) return;
 
@@ -124,6 +127,22 @@ struct AlloApp : App {
       force[i].z += -spring_stiffness * (current_radius - radius) * position[i].z / current_radius;
     }
 
+    // Vec3f distance_vector;
+    for (int i = 0; i < velocity.size(); i++)
+      for (int j = i + 1; j < velocity.size(); j++) {
+        // if (j == i)
+        //   continue;
+        // distance_vector = (position[i] - position[j]).normalize();
+        if (love && i % 10 == 0) {
+          force[i] += (position[i] - position[j]).normalize(charge * -1 / (position[i] - position[j]).magSqr());
+        }
+        else {
+          force[i] += (position[i] - position[j]).normalize(charge * 1 / (position[i] - position[j]).magSqr());
+        }
+        force[j] += (position[j] - position[i]).normalize(charge * 1 / (position[j] - position[i]).magSqr());
+        // force[i] += (charge * charge / (4 * M_PI * 1)) * ((position[i] - position[j]).mag() / pow((position[i] - position[j]).mag(), 3));
+      }
+
     for (int i = 0; i < velocity.size(); i++) {
       // "semi-implicit" Euler integration
       velocity[i] += force[i] / mass[i] * timeStep;
@@ -137,6 +156,10 @@ struct AlloApp : App {
   bool onKeyDown(const Keyboard &k) override {
     if (k.key() == ' ') {
       freeze = !freeze;
+    }
+
+    if (k.key() == '2') {
+      love = !love;
     }
 
     if (k.key() == '1') {
