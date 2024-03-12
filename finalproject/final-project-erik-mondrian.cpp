@@ -242,6 +242,15 @@ struct AlloApp : DistributedAppWithState<CommonState> {
       nav().set(original_pose);
     }
 
+    if (k.key() == 'p') {
+      pointSize = 1.0;
+      timeStep = 0.3;
+      dragFactor = 0.45;
+      radius = 3.0;
+      spring_stiffness = 0.75;
+      charge = 0.01;
+    }
+
     return true;
   }
 
