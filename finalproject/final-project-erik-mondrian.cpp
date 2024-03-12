@@ -34,6 +34,7 @@ struct CommonState {
   bool freeze;
   bool love;
   bool rand_force;
+  Pose pose;
 };
 
 struct AlloApp : DistributedAppWithState<CommonState> {
@@ -138,6 +139,10 @@ struct AlloApp : DistributedAppWithState<CommonState> {
       state().freeze = freeze;
       state().love = love;
       state().rand_force = rand_force;
+      state().pose = nav();
+    }
+    else {
+      nav().set(state().pose);
     }
 
     if (state().freeze) return;
