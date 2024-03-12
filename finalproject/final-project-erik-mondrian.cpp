@@ -18,12 +18,22 @@ using namespace std;
 Vec3f randomVec3f(float scale) {
   return Vec3f(rnd::uniformS(), rnd::uniformS(), rnd::uniformS()) * scale;
 }
+
 string slurp(string fileName);  // forward declaration
 
 struct CommonState {
-  char data[60000]; // larger than a UDP packet
-  int frame;
-  float signal;
+  // char data[60000]; // larger than a UDP packet
+  // int frame;
+  // float signal;
+  float pointSize;
+  float timeStep;
+  float dragFactor;
+  float radius;
+  float spring_stiffness;
+  float charge;
+  bool freeze;
+  bool love;
+  bool rand_force;
 };
 
 struct AlloApp : DistributedAppWithState<CommonState> {
@@ -61,6 +71,18 @@ struct AlloApp : DistributedAppWithState<CommonState> {
       gui.add(radius);
       gui.add(spring_stiffness);
       gui.add(charge);
+    }
+
+    if (isPrimary()) {
+      state().pointSize = pointSize;
+      state().timeStep = timeStep;
+      state().dragFactor = dragFactor;
+      state().radius = radius;
+      state().spring_stiffness = spring_stiffness;
+      state().charge = charge;
+      state().freeze = freeze;
+      state().love = love;
+      state().rand_force = rand_force;
     }
     //
   }
@@ -103,8 +125,22 @@ struct AlloApp : DistributedAppWithState<CommonState> {
 
   bool freeze = false;
   bool love = false;
+  bool rand_force = false;
+
   void onAnimate(double dt) override {
-    if (freeze) return;
+    if (isPrimary()) {
+      state().pointSize = pointSize;
+      state().timeStep = timeStep;
+      state().dragFactor = dragFactor;
+      state().radius = radius;
+      state().spring_stiffness = spring_stiffness;
+      state().charge = charge;
+      state().freeze = freeze;
+      state().love = love;
+      state().rand_force = rand_force;
+    }
+
+    if (state().freeze) return;
 
     // Calculate forces
 
@@ -130,8 +166,14 @@ struct AlloApp : DistributedAppWithState<CommonState> {
 
     // drag
     for (int i = 0; i < velocity.size(); i++) {
-      force[i] += - velocity[i] * dragFactor;
+      force[i] += - velocity[i] * state().dragFactor;
     }
+
+    if (state().rand_force)
+      for (int i = 0; i < velocity.size(); i++) {
+        // F = ma
+        force[i] += randomVec3f(1);
+      }
 
     // Integration
     //
@@ -140,9 +182,9 @@ struct AlloApp : DistributedAppWithState<CommonState> {
     float current_radius;
     for (int i = 0; i < velocity.size(); i++) {
       current_radius = sqrt(pow(position[i].x, 2) + pow(position[i].y, 2) + pow(position[i].z, 2));
-      force[i].x += -spring_stiffness * (current_radius - radius) * position[i].x / current_radius;
-      force[i].y += -spring_stiffness * (current_radius - radius) * position[i].y / current_radius;
-      force[i].z += -spring_stiffness * (current_radius - radius) * position[i].z / current_radius;
+      force[i].x += -state().spring_stiffness * (current_radius - state().radius) * position[i].x / current_radius;
+      force[i].y += -state().spring_stiffness * (current_radius - state().radius) * position[i].y / current_radius;
+      force[i].z += -state().spring_stiffness * (current_radius - state().radius) * position[i].z / current_radius;
     }
 
     // Vec3f distance_vector;
@@ -151,20 +193,20 @@ struct AlloApp : DistributedAppWithState<CommonState> {
         // if (j == i)
         //   continue;
         // distance_vector = (position[i] - position[j]).normalize();
-        if (love && i % 10 == 0) {
-          force[i] += (position[i] - position[j]).normalize(charge * -1 / (position[i] - position[j]).magSqr());
+        if (state().love && i % 10 == 0) {
+          force[i] += (position[i] - position[j]).normalize(state().charge * -1 / (position[i] - position[j]).magSqr());
         }
         else {
-          force[i] += (position[i] - position[j]).normalize(charge * 1 / (position[i] - position[j]).magSqr());
+          force[i] += (position[i] - position[j]).normalize(state().charge * 1 / (position[i] - position[j]).magSqr());
         }
-        force[j] += (position[j] - position[i]).normalize(charge * 1 / (position[j] - position[i]).magSqr());
+        force[j] += (position[j] - position[i]).normalize(state().charge * 1 / (position[j] - position[i]).magSqr());
         // force[i] += (charge * charge / (4 * M_PI * 1)) * ((position[i] - position[j]).mag() / pow((position[i] - position[j]).mag(), 3));
       }
 
     for (int i = 0; i < velocity.size(); i++) {
       // "semi-implicit" Euler integration
-      velocity[i] += force[i] / mass[i] * timeStep;
-      position[i] += velocity[i] * timeStep;
+      velocity[i] += force[i] / mass[i] * state().timeStep;
+      position[i] += velocity[i] * state().timeStep;
     }
 
     // clear all accelerations (IMPORTANT!!)
@@ -181,12 +223,20 @@ struct AlloApp : DistributedAppWithState<CommonState> {
     }
 
     if (k.key() == '1') {
+      rand_force = true;
       // introduce some "random" forces
-      for (int i = 0; i < velocity.size(); i++) {
+      /* for (int i = 0; i < velocity.size(); i++) {
         // F = ma
         force[i] += randomVec3f(1);
-      }
+      } */
     }
+
+    return true;
+  }
+
+  bool onKeyUp(const Keyboard &k) override {
+    if (k.key() == '1')
+      rand_force = false;
 
     return true;
   }
@@ -194,7 +244,7 @@ struct AlloApp : DistributedAppWithState<CommonState> {
   void onDraw(Graphics &g) override {
     g.clear(0.3);
     g.shader(pointShader);
-    g.shader().uniform("pointSize", pointSize / 100);
+    g.shader().uniform("pointSize", state().pointSize / 100);
     g.blending(true);
     g.blendTrans();
     g.depthTesting(true);
