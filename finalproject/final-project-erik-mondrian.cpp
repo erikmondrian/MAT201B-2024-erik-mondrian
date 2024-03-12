@@ -122,11 +122,13 @@ struct AlloApp : DistributedAppWithState<CommonState> {
 
     // nav().pos(0, 0, 15);
     nav().pos(0, 0, 0);
+    original_pose = nav();
   }
 
   bool freeze = false;
   bool love = false;
   bool rand_force = false;
+  Pose original_pose;
 
   void onAnimate(double dt) override {
     if (isPrimary()) {
@@ -234,6 +236,10 @@ struct AlloApp : DistributedAppWithState<CommonState> {
         // F = ma
         force[i] += randomVec3f(1);
       } */
+    }
+
+    if (k.key() == 'r') {
+      nav().set(original_pose);
     }
 
     return true;
