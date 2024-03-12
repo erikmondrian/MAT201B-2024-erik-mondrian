@@ -28,22 +28,22 @@ void main() {
   float r = pointSize;
   r *= vertex[0].size;
 
-  gl_Position = m * (v + vec4(-r, -r, 0.0, 0.0));
+  gl_Position = m * v + vec4(-r, -r, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(-1.0, -1.0);
   EmitVertex();
 
-  gl_Position = m * (v + vec4(r, -r, 0.0, 0.0));
+  gl_Position = m * v + vec4(r, -r, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(1.0, -1.0);
   EmitVertex();
 
-  gl_Position = m * (v + vec4(-r, r, 0.0, 0.0));
+  gl_Position = m * v + vec4(-r, r, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(-1.0, 1.0);
   EmitVertex();
 
-  gl_Position = m * (v + vec4(r, r, 0.0, 0.0));
+  gl_Position = m * v + vec4(r, r, 0.0, 0.0);
   fragment.color = vertex[0].color;
   fragment.mapping = vec2(1.0, 1.0);
   EmitVertex();
